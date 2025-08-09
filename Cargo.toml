@@ -25,6 +25,10 @@ members = [
     "vm",
 ]
 
+[[bin]]
+name = "echop"
+path = "src/main.rs"
+
 [lints]
 workspace = true
 

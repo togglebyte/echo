@@ -6,7 +6,12 @@ fn help() {
 Usage
 -----
 
-echo <file path>
+echop <file path>
+or
+echop <file path> <comment prefix>
+
+example: play back code.echo with `#` as the comments
+echop code.echo #
 
 For more information see https://github.com/togglebyte/echo
 ");
