@@ -28,7 +28,7 @@ fn main() -> anyhow::Result<()> {
 
     let code = std::fs::read_to_string(path)?;
     let instructions = parse(&code, &comment)?;
-    let instructions = vm::compile(instructions);
+    let instructions = vm::compile(instructions)?;
     ui::run(instructions);
     Ok(())
 }

@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::error::{Error, Result};
+
 pub struct Context {
     data: HashMap<String, String>,
 }
@@ -12,8 +14,8 @@ impl Context {
         self.data.insert(key, value);
     }
 
-    pub fn load(&self, key: impl AsRef<str>) -> Option<String> {
-        self.data.get(key.as_ref()).cloned()
+    pub fn load(&self, key: impl AsRef<str>) -> Result<String> {
+        let key = key.as_ref();
+        self.data.get(key).cloned().ok_or_else(|| Error::Load(key.into()))
     }
 }
-

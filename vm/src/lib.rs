@@ -5,19 +5,21 @@ use parser::{Dest, Source};
 use unicode_width::UnicodeWidthStr;
 
 pub use crate::context::Context;
+use crate::error::{Error, Result};
 pub use crate::instructions::Instruction;
 
 mod context;
+mod error;
 mod instructions;
 
-pub fn compile(parsed_instructions: parser::Instructions) -> Vec<Instruction> {
+pub fn compile(parsed_instructions: parser::Instructions) -> Result<Vec<Instruction>> {
     let mut context = Context::new();
     let mut instructions = vec![];
 
     for inst in parsed_instructions {
         match inst {
             parser::Instruction::Load(path, key) => {
-                let content = std::fs::read_to_string(path).unwrap();
+                let content = std::fs::read_to_string(&path).map_err(|_| Error::Import(path))?;
                 context.set(key, content);
             }
             parser::Instruction::Find(needle) => instructions.push(Instruction::FindInCurrentLine(needle)),
@@ -39,7 +41,7 @@ pub fn compile(parsed_instructions: parser::Instructions) -> Vec<Instruction> {
             } => {
                 let mut content = match source {
                     Source::Str(content) => content,
-                    Source::Ident(key) => context.load(key).unwrap(),
+                    Source::Ident(key) => context.load(key)?,
                 };
 
                 if trim_trailing_newline && content.ends_with('\n') {
@@ -55,7 +57,7 @@ pub fn compile(parsed_instructions: parser::Instructions) -> Vec<Instruction> {
                 let inst = match source {
                     Source::Str(content) => Instruction::Insert(content),
                     Source::Ident(key) => {
-                        let content = context.load(key).unwrap();
+                        let content = context.load(key)?;
                         Instruction::Insert(content)
                     }
                 };
@@ -80,7 +82,7 @@ pub fn compile(parsed_instructions: parser::Instructions) -> Vec<Instruction> {
         }
     }
 
-    instructions
+    Ok(instructions)
 }
 
 #[cfg(test)]
