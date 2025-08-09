@@ -1,0 +1,290 @@
+use std::collections::VecDeque;
+use std::time::Duration;
+
+use anathema::component::*;
+use anathema::default_widgets::{Canvas, CanvasBuffer};
+use anathema::geometry::{LocalPos, Pos, Region, Size};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use vm::Instruction;
+
+use crate::Random;
+use crate::document::Document;
+use crate::markers::generate;
+use crate::syntax::{Highlighter, InactiveScratch};
+use crate::textbuffer::TextBuffer;
+
+#[derive(Debug, State, Default)]
+pub struct DocState {
+    screen_cursor_x: Value<i32>,
+    screen_cursor_y: Value<i32>,
+    cursor_x: Value<i32>,
+    cursor_y: Value<i32>,
+    error: Value<String>,
+}
+
+// -----------------------------------------------------------------------------
+//   - Visual rang -
+// -----------------------------------------------------------------------------
+#[derive(Debug)]
+struct VisualRange {
+    region: Region,
+}
+
+impl VisualRange {
+    fn new(pos: Pos, size: Size) -> Self {
+        Self {
+            region: Region::from((pos, size)),
+        }
+    }
+}
+
+trait OptVisualRange {
+    fn contains(&self, pos: Pos) -> bool;
+}
+
+impl OptVisualRange for Option<VisualRange> {
+    fn contains(&self, pos: Pos) -> bool {
+        match self {
+            None => false,
+            Some(range) => range.region.contains(pos),
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+//   - Virtual editor -
+// -----------------------------------------------------------------------------
+pub struct Editor {
+    doc: Document,
+    cursor: Pos,
+    offset: Pos,
+    selected_range: Option<VisualRange>,
+    frame_time: Duration,
+    current_time: Duration,
+    instructions: VecDeque<Instruction>,
+    type_buffer: TextBuffer,
+    highlighter: Highlighter,
+    rand: Random,
+    buffer: CanvasBuffer,
+    lines: InactiveScratch,
+}
+
+impl Editor {
+    pub fn new(instructions: Vec<Instruction>, frame_time: Duration) -> Self {
+        Self {
+            doc: Document::new(String::new()),
+            cursor: Pos::ZERO,
+            offset: Pos::ZERO,
+            selected_range: None,
+            frame_time,
+            current_time: Duration::ZERO,
+            instructions: instructions.into(),
+            type_buffer: TextBuffer::new(),
+            highlighter: Highlighter::new(),
+            rand: Random::new(),
+            buffer: CanvasBuffer::default(),
+            lines: InactiveScratch::new(),
+        }
+    }
+
+    fn error(&mut self, state: &mut DocState, msg: impl Into<String>) {
+        self.instructions.clear();
+        state.error.set(msg.into());
+    }
+
+    fn apply(&mut self, state: &mut DocState) {
+        // If we have something to type then do that.
+        // otherwise load the next instruction
+        if let Some(s) = self.type_buffer.next() {
+            // type next char
+            self.doc.insert_str(self.cursor, s);
+
+            if s == "\n" {
+                self.cursor.x = 0;
+                self.cursor.y += 1;
+            } else {
+                self.cursor.x += s.width() as i32;
+            }
+
+            return;
+        }
+
+        match self.instructions.pop_front() {
+            None => return,
+            Some(instruction) => match instruction {
+                Instruction::LoadTypeBuffer(content) => {
+                    // Make markers and all that what what
+                    let (content, markers) = generate(content);
+                    if let Some(markers) = markers {
+                        self.doc.add_markers(self.cursor.y, &content, markers);
+                    }
+                    self.type_buffer.push(content);
+                }
+                Instruction::Jump(pos) => {
+                    self.cursor += pos;
+                    self.cursor.x = self.cursor.x.max(0);
+                    self.cursor.y = self.cursor.y.max(0);
+                }
+                Instruction::JumpToMarker(name) => {
+                    let Some(row) = self.doc.lookup_marker(&name).map(|m| m.row) else {
+                        return self.error(state, format!("marker \"{name}\" does not exist"));
+                    };
+                    self.cursor.y = row as i32;
+                }
+                Instruction::Select(size) => {
+                    if size == Size::ZERO {
+                        return;
+                    }
+
+                    let visual_range = VisualRange::new(self.cursor, size);
+                    self.cursor = visual_range.region.to - Pos::new(1, 1);
+                    self.selected_range = Some(visual_range);
+                }
+                Instruction::Insert(content) => {
+                    let (content, markers) = generate(content);
+                    if let Some(markers) = markers {
+                        self.doc.add_markers(self.cursor.y, &content, markers);
+                    }
+                    self.doc.insert_str(self.cursor, content);
+                }
+                Instruction::Delete => match self.selected_range.take() {
+                    Some(range) => {
+                        self.cursor = range.region.from;
+                        self.doc.delete(range.region);
+                    }
+                    None => self.doc.delete(Region::from((self.cursor, Size::new(1, 1)))),
+                },
+                Instruction::Wait(dur) => self.current_time = dur,
+                Instruction::Speed(dur) => self.frame_time = dur,
+                Instruction::FindInCurrentLine(text) => {
+                    let Some(x) = self.doc.find(self.cursor, text) else { return };
+                    self.cursor.x = x as i32;
+                }
+            },
+        }
+    }
+
+    fn update_cursor(&mut self, size: Size, state: &mut DocState) {
+        let height = size.height as i32 - 1;
+        let width = size.width as i32 - 1;
+
+        let y = self.cursor.y + self.offset.y;
+        if y > height {
+            self.offset.y = height - self.cursor.y;
+        } else if y < 0 {
+            self.offset.y -= self.cursor.y + self.offset.y;
+        }
+
+        let x = self.cursor.x + self.offset.x;
+        if x > width {
+            self.offset.x = width - self.cursor.x;
+        } else if x < 0 {
+            self.offset.x -= self.cursor.x + self.offset.x;
+        }
+
+        state.screen_cursor_x.set(self.cursor.x + self.offset.x);
+        state.screen_cursor_y.set(self.cursor.y + self.offset.y);
+        state.cursor_x.set(self.cursor.x);
+        state.cursor_y.set(self.cursor.y);
+    }
+
+    fn update_state(&mut self, state: &mut DocState, mut children: Children<'_, '_>) {
+        let size = children.elements().by_tag("canvas").first(|el, _| {
+            let size = el.size();
+            let canvas = el.to::<Canvas>();
+            canvas.clear();
+
+            let mut y = self.offset.y;
+
+            // re-highlight the content
+            let scratch = unsafe { self.lines.activate(self.doc.text()) };
+            scratch.with(|lines, code| {
+                self.highlighter.highlight(code, "rs", lines);
+
+                let skip = (y < 0).then_some(y.abs() as usize).unwrap_or(0);
+                y = 0;
+                for spans in lines.iter().skip(skip) {
+                    let mut x = self.offset.x;
+                    for span in spans {
+                        for c in span.src.chars() {
+                            if x >= 0 {
+                                let pos: LocalPos = (x, y).into();
+                                let mut style = span.style();
+                                // if we have a selected range
+                                // then set the background of the style to red
+                                // but only if the pos is inside the selected range
+                                if self.selected_range.contains(pos.into()) {
+                                    style.bg = Some(Color::Red);
+                                }
+                                canvas.put(c, style, pos);
+                            }
+                            x += c.width().unwrap_or(0) as i32;
+                        }
+                    }
+
+                    y += 1;
+                }
+            });
+
+            size
+        });
+
+        if let Some(size) = size {
+            self.update_cursor(size, state);
+        }
+    }
+}
+
+impl Component for Editor {
+    type Message = Instruction;
+    type State = DocState;
+
+    fn on_key(&mut self, key: KeyEvent, _: &mut Self::State, _: Children<'_, '_>, _: Context<'_, '_, Self::State>) {
+        match key.code {
+            KeyCode::Char('h') => self.instructions.push_back(Instruction::Jump(Pos::new(-1, 0))),
+            KeyCode::Char('j') => self.instructions.push_back(Instruction::Jump(Pos::new(0, 1))),
+            KeyCode::Char('k') => self.instructions.push_back(Instruction::Jump(Pos::new(0, -1))),
+            KeyCode::Char('l') => self.instructions.push_back(Instruction::Jump(Pos::new(1, 0))),
+            KeyCode::Char('d') => self.instructions.push_back(Instruction::Jump(Pos::new(0, 9))),
+            _ => {}
+        }
+    }
+
+    fn on_tick(
+        &mut self,
+        state: &mut Self::State,
+        mut children: Children<'_, '_>,
+        _: Context<'_, '_, Self::State>,
+        dt: Duration,
+    ) {
+        if !children.elements().by_tag("canvas").first(|_, _| true).unwrap_or(false) {
+            return;
+        }
+
+        self.current_time = self.current_time.saturating_sub(dt);
+
+        if self.current_time > Duration::ZERO {
+            return;
+        }
+
+        self.current_time = self.frame_time + Duration::from_millis(self.rand.next(20));
+        self.apply(state);
+        self.update_state(state, children);
+    }
+
+    fn on_mount(&mut self, _: &mut Self::State, mut children: Children<'_, '_>, _: Context<'_, '_, Self::State>) {
+        children
+            .elements()
+            .by_tag("canvas")
+            .first(|el, _| el.to::<Canvas>().restore_buffer(&mut self.buffer))
+            .unwrap();
+    }
+
+    fn on_unmount(&mut self, _: &mut Self::State, mut children: Children<'_, '_>, _: Context<'_, '_, Self::State>) {
+        self.buffer = children
+            .elements()
+            .by_tag("canvas")
+            .first(|el, _| el.to::<Canvas>().take_buffer())
+            .unwrap();
+    }
+}
