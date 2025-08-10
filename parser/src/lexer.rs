@@ -149,6 +149,7 @@ impl<'src> Lexer<'src> {
             "replace" => Token::Replace,
             "select" => Token::Select,
             "speed" => Token::Speed,
+            "title" => Token::SetTitle,
             "type" => Token::Type,
             "typenl" => Token::TypeNl,
             "wait" => Token::Wait,

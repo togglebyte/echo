@@ -26,4 +26,6 @@ pub enum Instruction {
     LinePause(Duration),
 
     FindInCurrentLine(String),
+
+    SetTitle(String),
 }

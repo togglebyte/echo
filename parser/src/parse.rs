@@ -225,6 +225,19 @@ impl<'src> Parser<'src> {
 
             Ok(instr)
         } else {
+            self.set_title()
+        }
+    }
+
+    fn set_title(&mut self) -> Result<Instruction> {
+        if self.tokens.consume_if(Token::SetTitle) {
+            let instr = match self.tokens.take() {
+                Token::Str(title) => Instruction::SetTitle(title),
+                token => return Error::invalid_arg("string", token, self.tokens.spans(), self.tokens.source),
+            };
+
+            Ok(instr)
+        } else {
             self.wait()
         }
     }

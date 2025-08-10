@@ -79,7 +79,10 @@ pub fn compile(parsed_instructions: parser::Instructions) -> Result<Vec<Instruct
             }
             parser::Instruction::Wait(seconds) => instructions.push(Instruction::Wait(Duration::from_secs(seconds))),
             parser::Instruction::Speed(millis) => instructions.push(Instruction::Speed(Duration::from_millis(millis))),
-            parser::Instruction::LinePause(millis) => instructions.push(Instruction::LinePause(Duration::from_millis(millis))),
+            parser::Instruction::LinePause(millis) => {
+                instructions.push(Instruction::LinePause(Duration::from_millis(millis)))
+            }
+            parser::Instruction::SetTitle(title) => instructions.push(Instruction::SetTitle(title)),
         }
     }
 

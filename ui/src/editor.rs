@@ -20,6 +20,7 @@ pub struct DocState {
     screen_cursor_y: Value<i32>,
     cursor_x: Value<i32>,
     cursor_y: Value<i32>,
+    title: Value<String>,
     error: Value<String>,
     debug: Value<String>,
 }
@@ -173,6 +174,7 @@ impl Editor {
                     self.cursor.x = x as i32;
                 }
                 Instruction::LinePause(duration) => self.line_pause = duration,
+                Instruction::SetTitle(title) => state.title.set(title),
             },
         }
     }
