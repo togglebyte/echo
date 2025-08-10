@@ -64,6 +64,12 @@ Syntax: `wait <seconds>`
 Set the speed for which commands are executed / content is typed
 
 Syntax: `speed <milliseconds>`
+
+## Line pause
+
+Set the speed for which to wait after each newline char is typed
+
+Syntax: `linepause <milliseconds>`
             
 ## Replace
 

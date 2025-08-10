@@ -67,6 +67,7 @@ pub struct Editor {
     rand: Random,
     buffer: CanvasBuffer,
     lines: InactiveScratch,
+    line_pause: Duration,
 }
 
 impl Editor {
@@ -84,6 +85,7 @@ impl Editor {
             rand: Random::new(),
             buffer: CanvasBuffer::default(),
             lines: InactiveScratch::new(),
+            line_pause: Duration::ZERO,
         }
     }
 
@@ -102,6 +104,10 @@ impl Editor {
             if s == "\n" {
                 self.cursor.x = 0;
                 self.cursor.y += 1;
+
+                if self.line_pause > Duration::ZERO {
+                    self.current_time = self.line_pause;
+                }
             } else {
                 self.cursor.x += s.width() as i32;
             }
@@ -162,6 +168,7 @@ impl Editor {
                     let Some(x) = self.doc.find(self.cursor, text) else { return };
                     self.cursor.x = x as i32;
                 }
+                Instruction::LinePause(duration) => self.line_pause = duration,
             },
         }
     }

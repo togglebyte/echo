@@ -22,6 +22,7 @@ pub enum Token {
     Find,
     Goto,
     Insert,
+    LinePause,
     Load,
     Replace,
     Select,
@@ -54,6 +55,7 @@ impl Display for Token {
             Token::Str(s) => write!(f, "\"{s}\""),
 
             Token::Find => write!(f, "find"),
+            Token::LinePause => write!(f, "line pause"),
             Token::Goto => write!(f, "goto"),
             Token::Insert => write!(f, "insert"),
             Token::Load => write!(f, "load"),

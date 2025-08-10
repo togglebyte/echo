@@ -32,7 +32,7 @@ pub enum Instruction {
     Type {
         source: Source,
         trim_trailing_newline: bool,
-        prefix_newline: bool
+        prefix_newline: bool,
     },
     Insert(Source),
     Delete,
@@ -56,6 +56,7 @@ pub enum Instruction {
         width: u16,
         height: u16,
     },
+    LinePause(u64),
     Speed(u64),
     Wait(u64),
 }

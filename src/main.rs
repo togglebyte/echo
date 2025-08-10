@@ -24,13 +24,8 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     };
 
-    let comment = args.next().unwrap_or("//".into());
-
-    // let comment = "#";
-    // let path = "/media/rustvids/anathema/hackbar/i3.echo";
-
     let code = std::fs::read_to_string(path)?;
-    let instructions = parse(&code, &comment)?;
+    let instructions = parse(&code)?;
     let instructions = vm::compile(instructions)?;
     ui::run(instructions);
     Ok(())

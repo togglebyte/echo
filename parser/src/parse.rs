@@ -206,9 +206,21 @@ impl<'src> Parser<'src> {
         // find <string>
         if self.tokens.consume_if(Token::Find) {
             let instr = match self.tokens.take() {
-                // Token::Ident(ident) => Instruction::Select(Dest::Marker(ident)),
                 Token::Str(needle) => Instruction::Find(needle),
                 token => return Error::invalid_arg("string", token, self.tokens.spans(), self.tokens.source),
+            };
+
+            Ok(instr)
+        } else {
+            self.linepause()
+        }
+    }
+
+    fn linepause(&mut self) -> Result<Instruction> {
+        if self.tokens.consume_if(Token::LinePause) {
+            let instr = match self.tokens.take() {
+                Token::Int(ms) => Instruction::LinePause(ms as u64),
+                token => return Error::invalid_arg("int", token, self.tokens.spans(), self.tokens.source),
             };
 
             Ok(instr)
@@ -375,5 +387,4 @@ goto 1     2
         let expected = vec![goto((1, 2)), wait(1), wait(2)];
         assert_eq!(output, expected);
     }
-
 }

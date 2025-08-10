@@ -139,6 +139,7 @@ impl<'src> Lexer<'src> {
             "find" => Token::Find,
             "goto" => Token::Goto,
             "insert" => Token::Insert,
+            "linepause" => Token::LinePause,
             "load" => Token::Load,
             "nonl" => Token::NoNewline,
             "replace" => Token::Replace,

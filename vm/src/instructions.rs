@@ -23,6 +23,7 @@ pub enum Instruction {
     Delete,
     Wait(Duration),
     Speed(Duration),
+    LinePause(Duration),
 
     FindInCurrentLine(String),
 }
