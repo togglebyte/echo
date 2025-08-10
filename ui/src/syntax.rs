@@ -127,7 +127,7 @@ impl Highlighter {
         let mut builder = ps.into_builder();
 
         // Try to load syntaxes from a config dir
-        let root = dirs::config_dir().unwrap().join("echo");
+        let root = dirs::config_dir().unwrap().join("parrot");
         let syntaxes = root.join("syntax");
         _ = builder.add_from_folder(syntaxes, true);
 

@@ -29,7 +29,7 @@ pub fn run(instructions: Vec<Instruction>) {
 
     let mut builder = Runtime::builder(doc, &backend);
 
-    let template_root = dirs::config_dir().unwrap().join("echo").join("templates");
+    let template_root = dirs::config_dir().unwrap().join("parrot").join("templates");
 
     builder
         .component("index", template_root.join("index.aml"), editor, Default::default())

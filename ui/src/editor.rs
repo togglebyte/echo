@@ -4,6 +4,7 @@ use std::time::Duration;
 use anathema::component::*;
 use anathema::default_widgets::{Canvas, CanvasBuffer};
 use anathema::geometry::{LocalPos, Pos, Region, Size};
+use anathema::widgets::query::Elements;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 use vm::Instruction;
 
@@ -20,6 +21,7 @@ pub struct DocState {
     cursor_x: Value<i32>,
     cursor_y: Value<i32>,
     error: Value<String>,
+    debug: Value<String>,
 }
 
 // -----------------------------------------------------------------------------
@@ -99,6 +101,7 @@ impl Editor {
         // otherwise load the next instruction
         if let Some(s) = self.type_buffer.next() {
             // type next char
+            state.debug.set(format!("{s}"));
             self.doc.insert_str(self.cursor, s);
 
             if s == "\n" {
@@ -115,7 +118,8 @@ impl Editor {
             return;
         }
 
-        match self.instructions.pop_front() {
+        let instruction = self.instructions.pop_front();
+        match instruction {
             None => return,
             Some(instruction) => match instruction {
                 Instruction::LoadTypeBuffer(content) => {
@@ -175,6 +179,7 @@ impl Editor {
 
     fn update_cursor(&mut self, size: Size, state: &mut DocState) {
         static PADDING: i32 = 5;
+
         let height = size.height as i32 - 1 - PADDING;
         let width = size.width as i32 - 1;
 
@@ -198,9 +203,8 @@ impl Editor {
         state.cursor_y.set(self.cursor.y);
     }
 
-    fn update_state(&mut self, state: &mut DocState, mut children: Children<'_, '_>) {
-        let size = children.elements().by_tag("canvas").first(|el, _| {
-            let size = el.size();
+    fn update_state(&mut self, state: &mut DocState, mut elements: Elements<'_, '_, '_>) {
+        elements.by_tag("canvas").first(|el, _| {
             let canvas = el.to::<Canvas>();
             canvas.clear();
 
@@ -235,13 +239,7 @@ impl Editor {
                     y += 1;
                 }
             });
-
-            size
         });
-
-        if let Some(size) = size {
-            self.update_cursor(size, state);
-        }
     }
 }
 
@@ -267,9 +265,9 @@ impl Component for Editor {
         _: Context<'_, '_, Self::State>,
         dt: Duration,
     ) {
-        if !children.elements().by_tag("canvas").first(|_, _| true).unwrap_or(false) {
+        let Some(size) = children.elements().by_tag("canvas").first(|el, _| el.size()) else {
             return;
-        }
+        };
 
         self.current_time = self.current_time.saturating_sub(dt);
 
@@ -279,7 +277,8 @@ impl Component for Editor {
 
         self.current_time = self.frame_time + Duration::from_millis(self.rand.next(20));
         self.apply(state);
-        self.update_state(state, children);
+        self.update_cursor(size, state);
+        self.update_state(state, children.elements());
     }
 
     fn on_mount(&mut self, _: &mut Self::State, mut children: Children<'_, '_>, _: Context<'_, '_, Self::State>) {
