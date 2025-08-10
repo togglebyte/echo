@@ -130,6 +130,7 @@ impl Editor {
                         return self.error(state, format!("marker \"{name}\" does not exist"));
                     };
                     self.cursor.y = row as i32;
+                    self.cursor.x = 0;
                 }
                 Instruction::Select(size) => {
                     if size == Size::ZERO {
@@ -142,10 +143,11 @@ impl Editor {
                 }
                 Instruction::Insert(content) => {
                     let (content, markers) = generate(content);
+                    self.cursor.x = 0;
+                    self.doc.insert_str(self.cursor, &content);
                     if let Some(markers) = markers {
                         self.doc.add_markers(self.cursor.y, &content, markers);
                     }
-                    self.doc.insert_str(self.cursor, content);
                 }
                 Instruction::Delete => match self.selected_range.take() {
                     Some(range) => {
@@ -165,7 +167,8 @@ impl Editor {
     }
 
     fn update_cursor(&mut self, size: Size, state: &mut DocState) {
-        let height = size.height as i32 - 1;
+        static PADDING: i32 = 5;
+        let height = size.height as i32 - 1 - PADDING;
         let width = size.width as i32 - 1;
 
         let y = self.cursor.y + self.offset.y;

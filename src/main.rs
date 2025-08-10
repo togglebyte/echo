@@ -6,14 +6,14 @@ fn help() {
 Usage
 -----
 
-echop <file path>
+parrot <file path>
 or
-echop <file path> <comment prefix>
+parrot <file path> <comment prefix>
 
 example: play back code.echo with `#` as the comments
-echop code.echo #
+parrot code.echo #
 
-For more information see https://github.com/togglebyte/echo
+For more information see https://github.com/togglebyte/parrot
 ");
 }
 
@@ -25,6 +25,9 @@ fn main() -> anyhow::Result<()> {
     };
 
     let comment = args.next().unwrap_or("//".into());
+
+    // let comment = "#";
+    // let path = "/media/rustvids/anathema/hackbar/i3.echo";
 
     let code = std::fs::read_to_string(path)?;
     let instructions = parse(&code, &comment)?;

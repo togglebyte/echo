@@ -11,7 +11,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Import(path) => write!(f, "failed to load \"{path:?}\""),
+            Error::Import(path) => write!(f, "failed to load \"{}\"", path.to_str().unwrap_or("<path>")),
             Error::Load(key) => write!(f, "\"{key}\" does not exist"),
         }
     }

@@ -1,5 +1,5 @@
 [package]
-name = "echo"
+name = "parrot"
 version = "0.1.0"
 edition = "2024"
 
@@ -24,10 +24,6 @@ members = [
     "ui",
     "vm",
 ]
-
-[[bin]]
-name = "echop"
-path = "src/main.rs"
 
 [lints]
 workspace = true

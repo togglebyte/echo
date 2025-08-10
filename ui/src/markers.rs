@@ -75,7 +75,10 @@ fn marker(offset: usize, line: &str) -> Option<Marker> {
     // Strip the marker prefix: '@'
     line = line[1..].trim();
 
-    let marker = line.chars().take_while(char::is_ascii_alphanumeric).collect::<String>();
+    let marker = line
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '-')
+        .collect::<String>();
 
     Some(Marker {
         row: offset,
@@ -103,6 +106,11 @@ impl Markers {
     fn split(&mut self, index: usize) -> Self {
         let new = self.inner.split_off(index);
         Self { inner: new }
+    }
+
+    pub fn offset_after(&mut self, row: usize, offset: usize) {
+        let index = self.inner.partition_point(|marker| marker.row < row);
+        self.inner[index..].iter_mut().for_each(|marker| marker.row += offset);
     }
 
     pub fn get(&self, key: &str) -> Option<&Marker> {
@@ -149,15 +157,12 @@ mod test {
 
     #[test]
     fn generate_markers() {
-        let s = "
-            // @zero
-            a
-            // @one
-            b
-            // @two
-            c
-        "
-        .trim()
+        let s = "// @zero
+a
+// @one
+b
+// @two
+c"
         .to_string();
 
         let (_, markers) = generate(s);

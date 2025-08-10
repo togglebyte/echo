@@ -59,6 +59,11 @@ impl Document {
         let s = s.as_ref();
         let index = self.byte_offset(pos);
         self.text.insert_str(index, s);
+
+        // If the string contains a newline character then offset all the markers by one
+        if s.contains('\n') {
+            self.markers.offset_after(pos.y as usize, 1);
+        }
     }
 
     // Get the byte position in the string
@@ -131,5 +136,25 @@ abcdefg";
 
         let actual = doc.text();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn insert_offsets_marker() {
+        let text = "1
+2
+// @mark
+3
+4";
+        let mut doc = Document::new(text);
+
+        eprintln!("{:#?}", &doc.markers);
+
+        let row = doc.lookup_marker("mark").map(|m|m.row as i32).unwrap();
+        doc.insert_str(Pos::new(0, row), "\n");
+
+        eprintln!("{}", doc.text());
+        eprintln!("{:#?}", &doc.markers);
+
+        panic!();
     }
 }

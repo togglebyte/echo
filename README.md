@@ -1,4 +1,4 @@
-# Echo
+# Parrot
 
 Script and playback of text with syntax highlighting.
 

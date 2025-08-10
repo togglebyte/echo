@@ -6,13 +6,12 @@ use unicode_width::UnicodeWidthChar;
 use crate::error::{Error, Result};
 use crate::token::{Span, Token, Tokens};
 
-pub fn lex<'a>(code: &'a str, comment_prefix: &'a str) -> Result<Tokens<'a>> {
-    Lexer::new(code, comment_prefix).lex()
+pub fn lex<'a>(code: &'a str) -> Result<Tokens<'a>> {
+    Lexer::new(code).lex()
 }
 
 struct Lexer<'src> {
     source: &'src str,
-    comment_prefix: &'src str,
     input: Peekable<Chars<'src>>,
     tokens: Vec<Token>,
     spans: Vec<Span>,
@@ -21,10 +20,9 @@ struct Lexer<'src> {
 }
 
 impl<'src> Lexer<'src> {
-    pub fn new(source: &'src str, comment_prefix: &'src str) -> Self {
+    pub fn new(source: &'src str) -> Self {
         Self {
             source,
-            comment_prefix,
             input: source.chars().peekable(),
             tokens: vec![],
             spans: vec![],
@@ -127,7 +125,7 @@ impl<'src> Lexer<'src> {
 
         loop {
             match self.input.peek() {
-                Some(c @ ('a'..='z' | 'A'..='Z' | '0'..'9')) => {
+                Some(c @ ('a'..='z' | 'A'..='Z' | '0'..'9' | '_' | '-')) => {
                     buffer.push(*c);
                     self.consume_char();
                 }
@@ -185,30 +183,18 @@ impl<'src> Lexer<'src> {
     }
 
     fn try_comment(&mut self, c: char) -> Option<Token> {
-        if !self.comment_prefix.starts_with(c) {
-            return None;
-        }
-
-        let token = match self.comment_prefix.len() {
-            0 => return None,
-            1 if self.comment_prefix.starts_with(c) => Token::Comment,
-            2 if self.comment_prefix.starts_with(c) => {
-                let next = self.input.peek()?; 
-                match self.comment_prefix[c.len_utf8()..].starts_with(*next) {
-                    true => Token::Comment,
-                    false => return None,
+        if c == '/'
+            && let Some('/') = self.input.peek()
+        {
+            while let Some(c) = self.input.next() {
+                if c == '\n' {
+                    break;
                 }
-            },
-            _ => return None,
-        };
-
-        while let Some(c) = self.input.next() {
-            if c == '\n' {
-                break
             }
+            return Some(Token::Comment);
         }
 
-        Some(token)
+        None
     }
 
     fn whitespace(&mut self) {

@@ -125,12 +125,20 @@ impl Highlighter {
         #[cfg(debug_assertions)]
         let ps = SyntaxSet::new();
         let mut builder = ps.into_builder();
-        builder
-            .add_from_folder("syntax", true)
-            .expect("syntax directory is missing");
+
+        // Try to load syntaxes from a config dir
+        let root = dirs::config_dir().unwrap().join("echo");
+        let syntaxes = root.join("syntax");
+        _ = builder.add_from_folder(syntaxes, true);
+
         builder.add_plain_text_syntax();
         let ps = builder.build();
-        let theme = ThemeSet::get_theme("themes/custom.stTheme").unwrap();
+
+        // Set the theme
+        // TODO: fall back to another theme.
+        // Maybe add an actual config file where this can be specified?
+        let theme_path = root.join("theme");
+        let theme = ThemeSet::get_theme(theme_path).expect("missing theme");
 
         Self { ps, theme }
     }

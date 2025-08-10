@@ -14,7 +14,6 @@ pub(crate) mod syntax;
 mod textbuffer;
 
 pub fn run(instructions: Vec<Instruction>) {
-    // configure the instruction emission time
     let editor = Editor::new(instructions, Duration::from_millis(20));
 
     let doc = Document::new("@index");
@@ -29,12 +28,14 @@ pub fn run(instructions: Vec<Instruction>) {
     backend.finalize();
 
     let mut builder = Runtime::builder(doc, &backend);
-    // builder.fps(4000);
+
+    let template_root = dirs::config_dir().unwrap().join("echo").join("templates");
+
     builder
-        .component("index", "templates/index.aml", editor, Default::default())
+        .component("index", template_root.join("index.aml"), editor, Default::default())
         .unwrap();
-    builder.template("status", "templates/status.aml").unwrap();
-    builder.template("error", "templates/error.aml").unwrap();
+    builder.template("status", template_root.join("status.aml")).unwrap();
+    builder.template("error", template_root.join("error.aml")).unwrap();
     let res = builder.finish(&mut backend, |runtime, backend| runtime.run(backend));
 
     match res {

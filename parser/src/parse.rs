@@ -375,4 +375,5 @@ goto 1     2
         let expected = vec![goto((1, 2)), wait(1), wait(2)];
         assert_eq!(output, expected);
     }
+
 }
