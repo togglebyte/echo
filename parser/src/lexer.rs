@@ -72,7 +72,7 @@ impl<'src> Lexer<'src> {
 
                 '-' | '0'..='9' => self.int(c)?,
                 'a'..='z' | 'A'..='Z' => self.ident(c)?,
-                '"' => self.string()?,
+                '"' | '\'' => self.string(c)?,
                 _ => self.whitespace(),
             }
         }
@@ -83,7 +83,7 @@ impl<'src> Lexer<'src> {
         Ok(tokens)
     }
 
-    fn string(&mut self) -> Result<()> {
+    fn string(&mut self, quote: char) -> Result<()> {
         let mut buffer = String::new();
         let mut escaping = false;
 
@@ -100,12 +100,16 @@ impl<'src> Lexer<'src> {
                     buffer.push('\n');
                     escaping = false;
                 }
-                Some(c @ ('"' | '\\')) if escaping => {
+                Some(c @ '\\') if escaping => {
+                    buffer.push(*c);
+                    escaping = false;
+                }
+                Some(c) if escaping && *c == quote => {
                     buffer.push(*c);
                     escaping = false;
                 }
                 // Closing quote
-                Some('"') => {
+                Some(c) if *c == quote => {
                     self.consume_char();
                     break;
                 }

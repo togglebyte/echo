@@ -203,7 +203,7 @@ impl Editor {
         state.cursor_y.set(self.cursor.y);
     }
 
-    fn update_state(&mut self, state: &mut DocState, mut elements: Elements<'_, '_, '_>) {
+    fn draw(&mut self, mut elements: Elements<'_, '_, '_>) {
         elements.by_tag("canvas").first(|el, _| {
             let canvas = el.to::<Canvas>();
             canvas.clear();
@@ -278,7 +278,7 @@ impl Component for Editor {
         self.current_time = self.frame_time + Duration::from_millis(self.rand.next(20));
         self.apply(state);
         self.update_cursor(size, state);
-        self.update_state(state, children.elements());
+        self.draw(children.elements());
     }
 
     fn on_mount(&mut self, _: &mut Self::State, mut children: Children<'_, '_>, _: Context<'_, '_, Self::State>) {
