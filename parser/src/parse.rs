@@ -272,7 +272,7 @@ mod test {
     use crate::lexer::lex;
 
     fn parse(input: &str) -> Result<Vec<Instruction>> {
-        let tokens = lex(input, "//")?;
+        let tokens = lex(input)?;
         super::parse(tokens).map(|i| i.take_instructions())
     }
 

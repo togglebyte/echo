@@ -59,12 +59,15 @@ impl<'src> Lexer<'src> {
         loop {
             let Some(c) = self.input.next() else { break };
 
-            if let Some(token) = self.try_comment(c) {
-                self.push_token(token);
-                continue;
-            }
-
             match c {
+                // -----------------------------------------------------------------------------
+                //   - Multi char tokens-
+                // -----------------------------------------------------------------------------
+                '/' if Some('/') == self.input.peek().copied() => self.comment(),
+
+                // -----------------------------------------------------------------------------
+                //   - Single char tokens -
+                // -----------------------------------------------------------------------------
                 '\n' => self.single_char_token(Token::Newline),
                 '=' => self.single_char_token(Token::Equal),
                 '@' => self.single_char_token(Token::At),
@@ -152,7 +155,7 @@ impl<'src> Lexer<'src> {
             "title" => Token::SetTitle,
             "type" => Token::Type,
             "typenl" => Token::TypeNl,
-            "wait" => Token::Wait,
+            "wait" | "sleep" => Token::Wait,
             _ => Token::Ident(buffer),
         };
         self.push_token(token);
@@ -188,19 +191,18 @@ impl<'src> Lexer<'src> {
         self.tokens.push(token);
     }
 
-    fn try_comment(&mut self, c: char) -> Option<Token> {
-        if c == '/'
-            && let Some('/') = self.input.peek()
-        {
-            while let Some(c) = self.input.next() {
-                if c == '\n' {
-                    break;
-                }
+    fn comment(&mut self) {
+        // Consume the last '\'
+        self.consume_char();
+
+        while let Some(&c) = self.input.peek() {
+            self.consume_char();
+            if c == '\n' {
+                break;
             }
-            return Some(Token::Comment);
         }
 
-        None
+        self.push_token(Token::Comment);
     }
 
     fn whitespace(&mut self) {
@@ -250,7 +252,7 @@ mod test {
     token_fn!(eof, Eof);
 
     fn lex_tokens(input: &str) -> Vec<Token> {
-        lex(input, "//").unwrap().take_tokens()
+        lex(input).unwrap().take_tokens()
     }
 
     #[test]
@@ -305,5 +307,28 @@ mod test {
 
         let expected = vec![comment(), eof()];
         assert_eq!(tokens, expected);
+    }
+
+    #[test]
+    fn span_for_comments() {
+        let input = "// comment";
+        let (start, end) = lex(input).unwrap().spans();
+
+        assert_eq!(
+            Span {
+                token: 0,
+                line: 1,
+                col: 1
+            },
+            start
+        );
+        assert_eq!(
+            Span {
+                token: 1,
+                line: 1,
+                col: 10,
+            },
+            end
+        );
     }
 }

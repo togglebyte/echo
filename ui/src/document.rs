@@ -61,8 +61,9 @@ impl Document {
         self.text.insert_str(index, s);
 
         // If the string contains a newline character then offset all the markers by one
-        if s.contains('\n') {
-            self.markers.offset_after(pos.y as usize, 1);
+        let newlines = s.chars().filter(|c| *c == '\n').count();
+        if newlines > 0 {
+            self.markers.offset_after(pos.y as usize, newlines);
         }
     }
 
@@ -140,21 +141,30 @@ abcdefg";
 
     #[test]
     fn insert_offsets_marker() {
-        let text = "1
-2
-// @mark
-3
-4";
+        static NEWLINES: usize = 4;
+        let text = "// @zero
+hello
+// @one
+world
+// @two
+!
+";
         let mut doc = Document::new(text);
 
         eprintln!("{:#?}", &doc.markers);
 
-        let row = doc.lookup_marker("mark").map(|m|m.row as i32).unwrap();
-        doc.insert_str(Pos::new(0, row), "\n");
+        let row = doc.lookup_marker("one").map(|m| m.row as i32).unwrap();
+        doc.insert_str(Pos::new(0, row), "\n".repeat(NEWLINES));
 
         eprintln!("{}", doc.text());
         eprintln!("{:#?}", &doc.markers);
 
-        panic!();
+        let zero = doc.lookup_marker("zero").map(|m| m.row as i32).unwrap();
+        let one = doc.lookup_marker("one").map(|m| m.row as i32).unwrap() as usize;
+        let two = doc.lookup_marker("two").map(|m| m.row as i32).unwrap() as usize;
+
+        assert_eq!(zero, 0);
+        assert_eq!(one, 1 + NEWLINES);
+        assert_eq!(two, 2 + NEWLINES);
     }
 }

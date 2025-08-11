@@ -14,7 +14,12 @@ pub struct Error {
 
 impl Error {
     fn err<T>(kind: ErrorKind, (start, end): (Span, Span), source: impl Into<String>) -> Result<T> {
-        let error = Self { kind, start, end, source: source.into() };
+        let error = Self {
+            kind,
+            start,
+            end,
+            source: source.into(),
+        };
         Err(error)
     }
 
@@ -36,7 +41,12 @@ impl Error {
         Self::err(ErrorKind::InvalidInstruction(token), spans, source)
     }
 
-    pub(crate) fn invalid_arg<T>(expected: &'static str, token: Token, spans: (Span, Span), source: impl Into<String>) -> Result<T> {
+    pub(crate) fn invalid_arg<T>(
+        expected: &'static str,
+        token: Token,
+        spans: (Span, Span),
+        source: impl Into<String>,
+    ) -> Result<T> {
         Self::err(
             ErrorKind::InvalidArg {
                 expected,
@@ -47,7 +57,12 @@ impl Error {
         )
     }
 
-    pub(crate) fn unexpected_token<T>(expected: &'static str, token: Token, spans: (Span, Span), source: impl Into<String>) -> Result<T> {
+    pub(crate) fn unexpected_token<T>(
+        expected: &'static str,
+        token: Token,
+        spans: (Span, Span),
+        source: impl Into<String>,
+    ) -> Result<T> {
         Self::err(
             ErrorKind::UnexpectedToken {
                 expected,
@@ -61,23 +76,29 @@ impl Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        static MAX_LINES: u16 = 3;
         let from = self.start.line.saturating_sub(2) as usize;
-        let to = self.end.line as usize + 1;
+        let to = MAX_LINES.max(self.end.line - self.start.line + 1) as usize;
 
-        writeln!(f, "")?;
-        let lines = self.source.lines().enumerate().skip(from).take(to).collect::<Vec<_>>();
+        let lines = self.source.lines().enumerate().skip(from).take(to);
+
+        let row_width = (from + to - 1).to_string().len();
+
+        writeln!(f)?;
         for (no, line) in lines {
-            writeln!(f, "{:<3}: {line}", no + 1)?;
+            let gutter = format!("{:>row_width$}: ", no + 1);
+            writeln!(f, "{gutter}{line}")?;
             if no + 1 == self.start.line as usize {
-                let indent = " ".repeat(self.start.col as usize);
-                writeln!(f, "{indent}  ^-- {}", self.kind)?;
+                let indent = " ".repeat(gutter.len());
+                writeln!(f, "{indent}^-- {}", self.kind)?;
             }
         }
         Ok(())
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+}
 
 #[derive(Debug)]
 pub enum ErrorKind {
@@ -98,7 +119,9 @@ impl Display for ErrorKind {
             ErrorKind::InvalidInteger => write!(f, "invalid integer"),
             ErrorKind::InvalidArg { expected, found } => write!(f, "expected `{expected}`, found `{found}`"),
             ErrorKind::InvalidInstruction(token) => write!(f, "invalid instruction: `{token}`"),
-            ErrorKind::UnexpectedToken { expected, found } => write!(f, "unexpected token, `{expected}`, found `{found}`"),
+            ErrorKind::UnexpectedToken { expected, found } => {
+                write!(f, "unexpected token, `{expected}`, found `{found}`")
+            }
         }
     }
 }

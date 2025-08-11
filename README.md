@@ -53,9 +53,10 @@ Syntax: `typenl <ident>|<string>`
 or optionally to remove the final trailing newline character:
 Syntax: `typenl <ident>|<string> nonl`
 
-## Wait
+## Wait / Sleep
 
 Wait N seconds before loading the next command.
+`sleep` is an alias for `wait`
 
 Syntax: `wait <seconds>`
 

@@ -77,7 +77,7 @@ impl Display for Token {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Span {
     pub token: u32,
     pub line: u16,
