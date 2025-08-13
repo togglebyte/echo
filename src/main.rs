@@ -24,6 +24,8 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     };
 
+    // let path = "/media/rustvids/anathema/hackbar/i3.echo";
+
     let code = std::fs::read_to_string(path)?;
     let instructions = parse(&code)?;
     let instructions = vm::compile(instructions)?;

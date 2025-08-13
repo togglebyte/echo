@@ -266,7 +266,6 @@ pub fn parse(tokens: Tokens<'_>) -> Result<Instructions> {
 #[cfg(test)]
 mod test {
     use std::path::PathBuf;
-    use std::time::Duration;
 
     use super::*;
     use crate::lexer::lex;

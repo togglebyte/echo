@@ -22,9 +22,8 @@ impl Document {
         Self { text, markers }
     }
 
-    pub fn add_markers(&mut self, row: i32, content: &str, markers: Markers) {
-        let new_line_count = content.bytes().filter(|b| *b == b'\n').count();
-        self.markers.merge(row as usize, new_line_count, markers);
+    pub fn add_markers(&mut self, row: i32, markers: Markers) {
+        self.markers.merge(row as usize, markers);
     }
 
     pub fn text(&self) -> &str {

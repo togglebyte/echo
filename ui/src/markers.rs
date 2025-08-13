@@ -119,7 +119,7 @@ impl Markers {
 
     // * offset new markers by insertion point
     // * offset current markers *after* the insertion point with N lines
-    pub fn merge(&mut self, insert_after_row: usize, number_of_new_rows: usize, mut other: Self) {
+    pub fn merge(&mut self, insert_after_row: usize, mut other: Self) {
         // Offset the new rows by the insertion point (row)
         other.offset_by(insert_after_row);
 
@@ -127,8 +127,7 @@ impl Markers {
         let index = self.inner.partition_point(|marker| marker.row < insert_after_row);
 
         // Offset the existing markers by the number of new rows added
-        let mut rhs = self.split(index);
-        rhs.offset_by(number_of_new_rows);
+        let rhs = self.split(index);
 
         // Add the new markers in before joining the old ones back in
         self.inner.extend(other);

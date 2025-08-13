@@ -11,8 +11,8 @@ anathema = { workspace = true }
 anyhow = "1.0.98"
 
 [workspace.dependencies]
-anathema = "0.2.10"
-# anathema = { path = "../anathema" }
+# anathema = "0.2.10"
+anathema = { path = "../anathema" }
 unicode-width = "0.2.1"
 parser = { path = "./parser" }
 ui = { path = "./ui" }
@@ -27,6 +27,10 @@ members = [
 
 [lints]
 workspace = true
+
+[profile.release]
+debug = true
+
 
 [workspace.lints.rust]
 rust_2018_idioms = "deny"

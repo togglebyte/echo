@@ -91,21 +91,4 @@ pub fn compile(parsed_instructions: parser::Instructions) -> Result<Vec<Instruct
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
-    #[test]
-    fn lol() {
-        let instructions = parser::parse(
-            "
-        wait 12
-        type \"what a nice day!\"
-        load \"/tmp/lol.txt\" as hello
-        type hello",
-        )
-        .unwrap();
-
-        let inst = compile(instructions);
-        eprintln!("{inst:#?}");
-        panic!()
-    }
 }

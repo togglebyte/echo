@@ -14,12 +14,20 @@ use crate::markers::generate;
 use crate::syntax::{Highlighter, InactiveScratch};
 use crate::textbuffer::TextBuffer;
 
+enum RenderAction {
+    Render,
+    Skip,
+}
+
 #[derive(Debug, State, Default)]
 pub struct DocState {
     screen_cursor_x: Value<i32>,
     screen_cursor_y: Value<i32>,
+    offset_x: Value<i32>,
+    offset_y: Value<i32>,
     cursor_x: Value<i32>,
     cursor_y: Value<i32>,
+    height: Value<u16>,
     title: Value<String>,
     error: Value<String>,
     debug: Value<String>,
@@ -97,7 +105,7 @@ impl Editor {
         state.error.set(msg.into());
     }
 
-    fn apply(&mut self, state: &mut DocState) {
+    fn apply(&mut self, state: &mut DocState) -> RenderAction {
         // If we have something to type then do that.
         // otherwise load the next instruction
         if let Some(s) = self.type_buffer.next() {
@@ -116,18 +124,18 @@ impl Editor {
                 self.cursor.x += s.width() as i32;
             }
 
-            return;
+            return RenderAction::Render;
         }
 
         let instruction = self.instructions.pop_front();
         match instruction {
-            None => return,
+            None => return RenderAction::Skip,
             Some(instruction) => match instruction {
                 Instruction::LoadTypeBuffer(content) => {
                     // Make markers and all that what what
                     let (content, markers) = generate(content);
                     if let Some(markers) = markers {
-                        self.doc.add_markers(self.cursor.y, &content, markers);
+                        self.doc.add_markers(self.cursor.y, markers);
                     }
                     self.type_buffer.push(content);
                 }
@@ -138,14 +146,15 @@ impl Editor {
                 }
                 Instruction::JumpToMarker(name) => {
                     let Some(row) = self.doc.lookup_marker(&name).map(|m| m.row) else {
-                        return self.error(state, format!("marker \"{name}\" does not exist"));
+                        self.error(state, format!("marker \"{name}\" does not exist"));
+                        return RenderAction::Render;
                     };
                     self.cursor.y = row as i32;
                     self.cursor.x = 0;
                 }
                 Instruction::Select(size) => {
                     if size == Size::ZERO {
-                        return;
+                        return RenderAction::Render;
                     }
 
                     let visual_range = VisualRange::new(self.cursor, size);
@@ -157,7 +166,7 @@ impl Editor {
                     self.cursor.x = 0;
                     self.doc.insert_str(self.cursor, &content);
                     if let Some(markers) = markers {
-                        self.doc.add_markers(self.cursor.y, &content, markers);
+                        self.doc.add_markers(self.cursor.y, markers);
                     }
                 }
                 Instruction::Delete => match self.selected_range.take() {
@@ -170,13 +179,15 @@ impl Editor {
                 Instruction::Wait(dur) => self.current_time = dur,
                 Instruction::Speed(dur) => self.frame_time = dur,
                 Instruction::FindInCurrentLine(text) => {
-                    let Some(x) = self.doc.find(self.cursor, text) else { return };
+                    let Some(x) = self.doc.find(self.cursor, text) else { return RenderAction::Render };
                     self.cursor.x = x as i32;
                 }
                 Instruction::LinePause(duration) => self.line_pause = duration,
                 Instruction::SetTitle(title) => state.title.set(title),
             },
         }
+        
+        RenderAction::Render
     }
 
     fn update_cursor(&mut self, size: Size, state: &mut DocState) {
@@ -203,6 +214,8 @@ impl Editor {
         state.screen_cursor_y.set(self.cursor.y + self.offset.y);
         state.cursor_x.set(self.cursor.x);
         state.cursor_y.set(self.cursor.y);
+        state.offset_x.set(self.offset.x);
+        state.offset_y.set(self.offset.y);
     }
 
     fn draw(&mut self, mut elements: Elements<'_, '_, '_>) {
@@ -271,6 +284,8 @@ impl Component for Editor {
             return;
         };
 
+        state.height.set(size.height);
+
         self.current_time = self.current_time.saturating_sub(dt);
 
         if self.current_time > Duration::ZERO {
@@ -278,9 +293,10 @@ impl Component for Editor {
         }
 
         self.current_time = self.frame_time + Duration::from_millis(self.rand.next(20));
-        self.apply(state);
-        self.update_cursor(size, state);
-        self.draw(children.elements());
+        if let RenderAction::Render = self.apply(state) {
+            self.update_cursor(size, state);
+            self.draw(children.elements());
+        }
     }
 
     fn on_mount(&mut self, _: &mut Self::State, mut children: Children<'_, '_>, _: Context<'_, '_, Self::State>) {
