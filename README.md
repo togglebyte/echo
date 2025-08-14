@@ -77,3 +77,9 @@ Syntax: `linepause <milliseconds>`
 Selects, deletes and replaces the text.
 
 Syntax: `replace <string> <ident>|<string>`
+
+## Numbers
+
+Show / hide line numbers
+
+Syntax: `numbers <true|false>`

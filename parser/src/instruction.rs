@@ -57,6 +57,7 @@ pub enum Instruction {
         height: u16,
     },
     SetTitle(String),
+    ShowLineNumbers(bool),
     LinePause(u64),
     Speed(u64),
     Wait(u64),

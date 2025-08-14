@@ -238,6 +238,19 @@ impl<'src> Parser<'src> {
 
             Ok(instr)
         } else {
+            self.numbers()
+        }
+    }
+
+    fn numbers(&mut self) -> Result<Instruction> {
+        if self.tokens.consume_if(Token::ShowLineNumbers) {
+            let instr = match self.tokens.take() {
+                Token::Bool(b) => Instruction::ShowLineNumbers(b),
+                token => return Error::invalid_arg("boolean", token, self.tokens.spans(), self.tokens.source),
+            };
+
+            Ok(instr)
+        } else {
             self.wait()
         }
     }

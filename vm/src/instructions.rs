@@ -28,4 +28,5 @@ pub enum Instruction {
     FindInCurrentLine(String),
 
     SetTitle(String),
+    ShowLineNumbers(bool),
 }

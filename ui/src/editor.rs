@@ -31,6 +31,7 @@ pub struct DocState {
     title: Value<String>,
     error: Value<String>,
     debug: Value<String>,
+    show_line_numbers: Value<bool>,
 }
 
 // -----------------------------------------------------------------------------
@@ -184,9 +185,10 @@ impl Editor {
                 }
                 Instruction::LinePause(duration) => self.line_pause = duration,
                 Instruction::SetTitle(title) => state.title.set(title),
+                Instruction::ShowLineNumbers(show) => state.show_line_numbers.set(show),
             },
         }
-        
+
         RenderAction::Render
     }
 
